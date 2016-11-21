@@ -1,0 +1,12 @@
+
+<%= link_to "Go on an Expedition", id: "#createExpedition", class: "btn" %>
+
+<%= form_for @expedition, method: :post do |f| %>
+  <%= f.label :title %><br>
+  <%= f.text_field :title %><br>
+  <%= f.label :description %><br>
+  <%= f.text_area :description %>a<br>
+  <p>If you leave the exhibition page without saving, the exhibition will be deleted. Make sure you save as you go!</p>
+  <%= f.submit "Start your expedition" %><br>
+<% end %>
+

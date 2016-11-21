@@ -1,0 +1,184 @@
+<style>
+#map {
+  height: 400px;
+  width: 100%;
+}
+</style>
+
+<div id="map"></div>
+<br>
+<p>Latitude: <span id="latitude"></span></p>
+<p>Longitude: <span id="longitude"></span></p>
+<p>Accuracy: <span id="accuracy"></span></p>
+<p>Heading: <span id="compass"></span>°</p>
+<br>
+
+<%= form_for @expedition, html: {id: "submitTitle"}, remote: true, method: :patch do |f| %>
+  <%= f.label :title %><br>
+  <%= f.text_area :title %><br>
+  <%= f.submit %>
+<% end %>
+<br>
+<%= form_for @expedition, html: {id: "submitDescription"}, remote: true, method: :patch do |f| %>
+  <%= f.label :desciption %><br>
+  <%= f.text_area :description %><br>
+  <%= f.submit %>
+<% end %>
+<br>
+<%= form_for [@expedition, @annotation], html: {id: "submitImage"}, remote: true, method: :post do |f| %>
+  <%= f.label "Upload an Image" %><br>
+  <%= f.file_field :image %><br>
+  <%= f.submit "Add Image" %>
+<% end %>
+<br>
+<%= form_for [@expedition, @annotation], html: {id: "submitRecording"}, remote: true, method: :post do |f| %>
+  <%= f.label "Upload a Recording" %><br>
+  <%= f.file_field :recording %><br>
+  <%= f.submit "Add Recording" %>
+<% end %>
+
+<script src="/assets/fulltilt-min.js"></script>
+
+<script>
+
+var map;
+var poly;
+var path;
+var heading;
+var startMarker;
+var marker;
+var contentMarker;
+var infoWindow;
+var lastInfoWindow;
+
+function initMap() {
+  var compassSpan = document.getElementById("compass");
+  heading = 0.0;
+  // Obtain a new *world-oriented* Full Tilt JS DeviceOrientation Promise
+  var promise = FULLTILT.getDeviceOrientation({ type: 'world'  });
+
+  // Wait for Promise result
+  promise.then(function(deviceOrientation) {
+    // Apparently device orientation events are supported, so register a callback
+    deviceOrientation.listen(function() {
+      // Get the current *screen-adjusted* device orientation angles
+      var currentOrientation = deviceOrientation.getScreenAdjustedEuler();
+      console.log(currentOrientation);
+      // Calculate the current compass heading that the user is facing (in degrees)
+      heading = 360 - currentOrientation.alpha;
+      compassSpan.innerHTML = heading.toString();
+    });
+  }).catch(function(errorMessage) {
+    // Device Orientation Events are not supported
+    console.log(errorMessage);
+  });
+  map = new google.maps.Map(document.getElementById('map'), {
+    minZoom: 3,
+    zoom: 14,
+  });
+  <%# startMarker = new google.maps.Marker({ %>
+  <%#   map: map, %>
+  <%#   draggable: false %>
+  <%# }); %>
+  marker = new google.maps.Marker({
+    map: map,
+    draggable: false
+  });
+  dropMarker = new google.maps.Marker({
+    map: map,
+    draggable: false,
+    animation: google.maps.Animation.DROP
+  });
+  map.addListener('click', function (e) {
+    dropMarker.setVisible(true);
+    dropMarker.setPosition(e.latLng);
+  });
+  contentMarker = new google.maps.Marker({
+    map: map,
+    draggable: false,
+    animation: google.maps.Animation.DROP
+  })
+  infoWindow = new google.maps.InfoWindow({
+  })
+  contentMarker.addListener("click", function () {
+    map.panTo(contentMarker.getPosition());
+    if (lastInfoWindow != null) {
+      lastInfoWindow.close();
+    }
+    if (infoWindowClosed) {
+      infoWindow.open(map, contentMarker);
+      infoWindowClosed = false;
+    } else {
+      infoWindow.open(map, contentMarker);
+      infoWindowClosed = true;
+    }
+    lastInfoWindow = infoWindow;
+  })
+  poly = new google.maps.Polyline({
+    strokeColor: '#009900',
+    strokeOpacity: 1.0,
+    strokeWeight: 3
+  });
+  poly.setMap(map);
+  path = poly.getPath();
+}
+</script>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCgPKDNnR376aeoPLyafsvnJs_EcpDtPV8&callback=initMap" async defer>
+</script>
+
+<script>
+window.onload = function () {
+  var csrf = $('meta[name=csrf-token]').attr('content');
+  function locate () {
+    var geo = navigator.geolocation;
+    if (geo) {
+      geo.getCurrentPosition(function (data) {
+        latLng = new google.maps.LatLng(data.coords.latitude, data.coords.longitude);
+        map.setCenter(latLng);
+        marker.setPosition(latLng);
+        $('#latitude').html(data.coords.latitude.toString());
+        $('#longitude').html(data.coords.longitude.toString());
+        $('#accuracy').html(data.coords.accuracy.toString());
+        $.post('/expeditions/' + <%= @expedition.id %> + '/coordinates', {
+          authenticity_token: csrf,
+          coordinate: {
+            lat: data.coords.latitude,
+            lng: data.coords.longitude,
+            accuracy: data.coords.accuracy,
+            altitude: data.coords.altitude,
+            heading: heading
+          }
+        }).done(function (response) {
+          path = poly.getPath();
+          coordinate = new google.maps.LatLng(response.lat, response.lng);
+          path.push(coordinate);
+        });
+      });
+    }
+    setTimeout(locate, 1000);
+  }
+  locate();
+
+  $('#submitTitle').on("ajax:success", function (e, data) {
+    $('#title').html(data.title);
+  });
+
+  $('#submitDescription').on("ajax:success", function (e, data) {
+    $('#description').html(data.description);
+  });
+
+  $('#submitImage').on("ajax:remotipartComplete", function (e, data) {
+    response = JSON.parse(data.responseText);
+    console.log(response);
+    latLng = new google.maps.LatLng(response.coordinate.latitude, response.coordinate.longitude)
+    contentMarker.setPosition(latLng)
+  });
+
+  $('#submitRecording').on("ajax:remotipartComplete", function (e, data) {
+    response = JSON.parse(data.responseText);
+    latLng = new google.maps.LatLng(response.coordinate.latitude, response.coordinate.longitude)
+    contentMarker.setPosition(latLng)
+  });
+}
+</script>
