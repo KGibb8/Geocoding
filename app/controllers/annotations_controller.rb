@@ -2,12 +2,12 @@ class AnnotationsController < ApplicationController
   def create
     expedition = current_user.expeditions.find(params[:expedition_id].to_i)
     annotation = expedition.attach_file(annotation_params)
-    render json: {annotation: annotation, coordinate: annotation.coordinate}
+    unless annotation.recording.file.nil?
+      render json: {annotation: {url: annotation.recording.url, content_type: annotation.recording.content_type}, coordinate: annotation.coordinate}
+    else
+      render json: {annotation: annotation, coordinate: annotation.coordinate}
+    end
   end
-
-  # def update
-
-  # end
 
   def destroy
 

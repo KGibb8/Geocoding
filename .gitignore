@@ -15,3 +15,11 @@
 
 # Ignore Byebug command history file.
 .byebug_history
+
+# Ignore vim swp files
+*.swp
+*.swo
+*.swn
+*.swm
+
+/public/uploads

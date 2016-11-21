@@ -8,7 +8,11 @@ class CoordinatesChannel < ApplicationCable::Channel
     # Any cleanup needed when channel is unsubscribed
   end
 
-  def create
-    binding.pry
+  def create(data)
+    coordinate_params = data["coordinate"].merge(expedition: Expedition.find(data["expedition"]["id"]))
+    coordinate = Coordinate.create(coordinate_params)
+    ActionCable.server.broadcast("coordinates_channel", coordinate: coordinate)
   end
+
+
 end

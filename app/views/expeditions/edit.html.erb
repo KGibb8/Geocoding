@@ -5,13 +5,18 @@
 }
 </style>
 
+<%= button_tag "Start your Expedition", id: "startLocate" %>-----<%= button_tag "Stop your Expedition", id: "stopLocate" %>
+
+<hr>
 <div id="map"></div>
+<hr>
 <br>
 <p>Latitude: <span id="latitude"></span></p>
 <p>Longitude: <span id="longitude"></span></p>
 <p>Accuracy: <span id="accuracy"></span></p>
 <p>Heading: <span id="compass"></span>°</p>
 <br>
+
 
 <%= form_for @expedition, html: {id: "submitTitle"}, remote: true, method: :patch do |f| %>
   <%= f.label :title %><br>
@@ -41,6 +46,11 @@
 
 <script>
 
+// Perhaps we sort out coordinates in the controller, maybe a coordinate has an incrementing value for each time you return to the page
+// Maybe they hold an id of some kind which references the previous batch? Maybe this is a new model?
+// Build out a new polyline for each batch of coordinates
+var previousCoordinates = [<% @expedition.coordinates.each do |coordinate| %><%= "{id: #{coordinate.id}, latitude: #{coordinate.latitude}, longitude: #{coordinate.longitude}}," %><% end %>]
+
 var map;
 var poly;
 var path;
@@ -50,6 +60,8 @@ var marker;
 var contentMarker;
 var infoWindow;
 var lastInfoWindow;
+var infoWindowClosed;
+var infoWindowClosed = true;
 
 function initMap() {
   var compassSpan = document.getElementById("compass");
@@ -75,11 +87,12 @@ function initMap() {
   map = new google.maps.Map(document.getElementById('map'), {
     minZoom: 3,
     zoom: 14,
+    <%# mapTypeId: 'satellite' %>
   });
-  <%# startMarker = new google.maps.Marker({ %>
-  <%#   map: map, %>
-  <%#   draggable: false %>
-  <%# }); %>
+  startMarker = new google.maps.Marker({
+    map: map,
+    draggable: false
+  });
   marker = new google.maps.Marker({
     map: map,
     draggable: false
@@ -93,27 +106,6 @@ function initMap() {
     dropMarker.setVisible(true);
     dropMarker.setPosition(e.latLng);
   });
-  contentMarker = new google.maps.Marker({
-    map: map,
-    draggable: false,
-    animation: google.maps.Animation.DROP
-  })
-  infoWindow = new google.maps.InfoWindow({
-  })
-  contentMarker.addListener("click", function () {
-    map.panTo(contentMarker.getPosition());
-    if (lastInfoWindow != null) {
-      lastInfoWindow.close();
-    }
-    if (infoWindowClosed) {
-      infoWindow.open(map, contentMarker);
-      infoWindowClosed = false;
-    } else {
-      infoWindow.open(map, contentMarker);
-      infoWindowClosed = true;
-    }
-    lastInfoWindow = infoWindow;
-  })
   poly = new google.maps.Polyline({
     strokeColor: '#009900',
     strokeOpacity: 1.0,
@@ -130,35 +122,44 @@ function initMap() {
 <script>
 window.onload = function () {
   var csrf = $('meta[name=csrf-token]').attr('content');
+  var timer;
   function locate () {
     var geo = navigator.geolocation;
     if (geo) {
       geo.getCurrentPosition(function (data) {
         latLng = new google.maps.LatLng(data.coords.latitude, data.coords.longitude);
+        if (path.b.length == 0) {
+          startMarker.setPosition(latLng);
+        }
         map.setCenter(latLng);
         marker.setPosition(latLng);
         $('#latitude').html(data.coords.latitude.toString());
         $('#longitude').html(data.coords.longitude.toString());
         $('#accuracy').html(data.coords.accuracy.toString());
-        $.post('/expeditions/' + <%= @expedition.id %> + '/coordinates', {
-          authenticity_token: csrf,
+        App.coordinates.create({
           coordinate: {
-            lat: data.coords.latitude,
-            lng: data.coords.longitude,
+            latitude: data.coords.latitude,
+            longitude: data.coords.longitude,
             accuracy: data.coords.accuracy,
             altitude: data.coords.altitude,
-            heading: heading
+            bearing: heading
+          },
+          expedition: {
+            id: <%= @expedition.id %>
           }
-        }).done(function (response) {
-          path = poly.getPath();
-          coordinate = new google.maps.LatLng(response.lat, response.lng);
-          path.push(coordinate);
         });
       });
     }
-    setTimeout(locate, 1000);
+    timer = setTimeout(locate, 1000);
   }
-  locate();
+  // Locate starts whenever you click the button!
+  $('#startLocate').on("click", function () {
+    locate();
+  })
+
+  $('#stopLocate').on("click", function () {
+    clearTimeout(timer);
+  })
 
   $('#submitTitle').on("ajax:success", function (e, data) {
     $('#title').html(data.title);
@@ -171,14 +172,59 @@ window.onload = function () {
   $('#submitImage').on("ajax:remotipartComplete", function (e, data) {
     response = JSON.parse(data.responseText);
     console.log(response);
-    latLng = new google.maps.LatLng(response.coordinate.latitude, response.coordinate.longitude)
-    contentMarker.setPosition(latLng)
+    latLng = new google.maps.LatLng(response.coordinate.latitude, response.coordinate.longitude);
+    var contentMarker = new google.maps.Marker({
+      map: map,
+      draggable: false,
+      animation: google.maps.Animation.DROP
+    });
+    var infoWindow = new google.maps.InfoWindow({
+      content: '<img src="' + response.annotation.image.thumb.url + '">'
+    });
+    contentMarker.setPosition(latLng);
+    contentMarker.addListener("click", function () {
+      map.panTo(contentMarker.getPosition());
+      if (lastInfoWindow != null) {
+        lastInfoWindow.close();
+      }
+      if (infoWindowClosed) {
+        infoWindow.open(map, contentMarker);
+        infoWindowClosed = false;
+      } else {
+        infoWindow.open(map, contentMarker);
+        infoWindowClosed = true;
+      }
+      lastInfoWindow = infoWindow;
+    })
   });
 
   $('#submitRecording').on("ajax:remotipartComplete", function (e, data) {
     response = JSON.parse(data.responseText);
-    latLng = new google.maps.LatLng(response.coordinate.latitude, response.coordinate.longitude)
-    contentMarker.setPosition(latLng)
+    latLng = new google.maps.LatLng(response.coordinate.latitude, response.coordinate.longitude);
+    debugger
+    var contentMarker = new google.maps.Marker({
+      map: map,
+      draggable: false,
+      animation: google.maps.Animation.DROP
+    });
+    var infoWindow = new google.maps.InfoWindow({
+      content: '<audio controls><source src="' + response.annotation.url + '" type="'+ response.annotation.content_type  + '"></audio>'
+    });
+    contentMarker.setPosition(latLng);
+    contentMarker.addListener("click", function () {
+      map.panTo(contentMarker.getPosition());
+      if (lastInfoWindow != null) {
+        lastInfoWindow.close();
+      }
+      if (infoWindowClosed) {
+        infoWindow.open(map, contentMarker);
+        infoWindowClosed = false;
+      } else {
+        infoWindow.open(map, contentMarker);
+        infoWindowClosed = true;
+      }
+      lastInfoWindow = infoWindow;
+    })
   });
 }
 </script>
