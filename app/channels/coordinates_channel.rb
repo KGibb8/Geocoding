@@ -9,9 +9,10 @@ class CoordinatesChannel < ApplicationCable::Channel
   end
 
   def create(data)
-    coordinate_params = data["coordinate"].merge(expedition: Expedition.find(data["expedition"]["id"]))
+    expedition = Expedition.find(data["expedition"]["id"])
+    coordinate_params = data["coordinate"].merge(expedition: expedition)
     coordinate = Coordinate.create(coordinate_params)
-    ActionCable.server.broadcast("coordinates_channel", coordinate: coordinate)
+    ActionCable.server.broadcast("coordinates_channel", {coordinate: coordinate, distance_travelled: expedition.distance_travelled})
   end
 
 

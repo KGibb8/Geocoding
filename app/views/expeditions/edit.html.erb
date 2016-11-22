@@ -1,13 +1,19 @@
 <style>
 #map {
-  height: 400px;
+  height: 500px;
   width: 100%;
+}
+#startLocate {
+  float: left;
+}
+#stopLocate{
+  float: right;
 }
 </style>
 
-<%= button_tag "Start your Expedition", id: "startLocate" %>-----<%= button_tag "Stop your Expedition", id: "stopLocate" %>
+<%= button_tag "Start Geolocation", id: "startLocate" %>
+<%= button_tag "Stop Geolocation", id: "stopLocate" %>
 
-<hr>
 <div id="map"></div>
 <hr>
 <br>
@@ -15,6 +21,7 @@
 <p>Longitude: <span id="longitude"></span></p>
 <p>Accuracy: <span id="accuracy"></span></p>
 <p>Heading: <span id="compass"></span>°</p>
+<p>Distance Travelled: <span id="distance"></span></p>
 <br>
 
 
@@ -49,6 +56,7 @@
 // Perhaps we sort out coordinates in the controller, maybe a coordinate has an incrementing value for each time you return to the page
 // Maybe they hold an id of some kind which references the previous batch? Maybe this is a new model?
 // Build out a new polyline for each batch of coordinates
+// Key on side with start/finish 
 var previousCoordinates = [<% @expedition.coordinates.each do |coordinate| %><%= "{id: #{coordinate.id}, latitude: #{coordinate.latitude}, longitude: #{coordinate.longitude}}," %><% end %>]
 
 var map;
@@ -86,8 +94,8 @@ function initMap() {
   });
   map = new google.maps.Map(document.getElementById('map'), {
     minZoom: 3,
-    zoom: 14,
-    <%# mapTypeId: 'satellite' %>
+    zoom: 16,
+    mapTypeId: 'satellite'
   });
   startMarker = new google.maps.Marker({
     map: map,
@@ -152,7 +160,7 @@ window.onload = function () {
     }
     timer = setTimeout(locate, 1000);
   }
-  // Locate starts whenever you click the button!
+
   $('#startLocate').on("click", function () {
     locate();
   })
@@ -160,6 +168,20 @@ window.onload = function () {
   $('#stopLocate').on("click", function () {
     clearTimeout(timer);
   })
+
+  function toggleWindow (infoWindow) {
+    if (lastInfoWindow != null) {
+      lastInfoWindow.close();
+    }
+    if (infoWindowClosed) {
+      infoWindow.open(map, contentMarker);
+      infoWindowClosed = false;
+    } else {
+      infoWindow.open(map, contentMarker);
+      infoWindowClosed = true;
+    }
+    lastInfoWindow = infoWindow;
+  }
 
   $('#submitTitle').on("ajax:success", function (e, data) {
     $('#title').html(data.title);
@@ -171,7 +193,6 @@ window.onload = function () {
 
   $('#submitImage').on("ajax:remotipartComplete", function (e, data) {
     response = JSON.parse(data.responseText);
-    console.log(response);
     latLng = new google.maps.LatLng(response.coordinate.latitude, response.coordinate.longitude);
     var contentMarker = new google.maps.Marker({
       map: map,
@@ -201,7 +222,6 @@ window.onload = function () {
   $('#submitRecording').on("ajax:remotipartComplete", function (e, data) {
     response = JSON.parse(data.responseText);
     latLng = new google.maps.LatLng(response.coordinate.latitude, response.coordinate.longitude);
-    debugger
     var contentMarker = new google.maps.Marker({
       map: map,
       draggable: false,

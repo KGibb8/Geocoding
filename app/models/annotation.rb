@@ -5,7 +5,6 @@ class Annotation < ApplicationRecord
   belongs_to :coordinate
   mount_uploader :image, ImageUploader
   mount_uploader :recording, RecordingUploader
-  # mount_uploader :note, AnnotationUploader
 
   validate :presence_of_content
 

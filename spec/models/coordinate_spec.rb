@@ -24,6 +24,15 @@ RSpec.describe Coordinate do
       expect(coordinate_not_valid.errors.messages).equal? "A Coordinate requires a new location relative to its previous"
     end
 
+    it "should return 0 if only one coordinate exists" do
+      expect(@coordinate.distance_to_last).to eq 0
+    end
+
+    it "should calculate the distance from itself to the previous coordinate in the sequence" do
+      @new_coord = @expedition.coordinates.create(latitude: 51.1234662, longitude: -0.01234517)
+      expect(@new_coord.distance_to_last).to eq 0.6567561
+    end
+
   end
 
 end

@@ -4,6 +4,6 @@ class User < ApplicationRecord
   devise :database_authenticatable, :registerable,
          :recoverable, :rememberable, :trackable, :validatable
 
-  has_many :expeditions
+  has_many :expeditions, dependent: :destroy
   has_many :coordinates, through: :expeditions
 end
