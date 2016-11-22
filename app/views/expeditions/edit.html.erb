@@ -21,7 +21,7 @@
 <p>Longitude: <span id="longitude"></span></p>
 <p>Accuracy: <span id="accuracy"></span></p>
 <p>Heading: <span id="compass"></span>°</p>
-<p>Distance Travelled: <span id="distance"></span></p>
+<p>Distance Travelled: <span id="distance"></span>m</p>
 <br>
 
 
@@ -169,7 +169,7 @@ window.onload = function () {
     clearTimeout(timer);
   })
 
-  function toggleWindow (infoWindow) {
+  function toggleWindow (infoWindow, map, contentMarker) {
     if (lastInfoWindow != null) {
       lastInfoWindow.close();
     }

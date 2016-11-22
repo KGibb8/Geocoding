@@ -2,6 +2,7 @@ class CreateCoordinates < ActiveRecord::Migration[5.0]
   def change
     create_table :coordinates do |t|
       t.references :expedition, foreign_key: true
+      t.references :parent, index: true
       t.float :latitude
       t.float :longitude
       t.integer :accuracy

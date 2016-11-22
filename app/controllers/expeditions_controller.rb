@@ -39,3 +39,4 @@ class ExpeditionsController < ApplicationController
   end
 
 end
+
