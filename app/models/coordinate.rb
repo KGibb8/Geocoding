@@ -1,7 +1,8 @@
 class Coordinate < ApplicationRecord
   belongs_to :expedition
   has_many :annotations, dependent: :destroy
-  belongs_to :parent, class_name: "Coordinate", foreign_key: :parent_id, required: false
+  belongs_to :parent, class_name: self.name, inverse_of: :children, required: false
+  has_many :children, class_name: self.name, foreign_key: :parent_id, inverse_of: :parent
 
   reverse_geocoded_by :latitude, :longitude
   after_validation :geocode

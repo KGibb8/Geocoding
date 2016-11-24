@@ -57,12 +57,10 @@
 
 <script>
 
-// Perhaps we sort out coordinates in the controller, maybe a coordinate has an incrementing value for each time you return to the page
-// Maybe they hold an id of some kind which references the previous batch? Maybe this is a new model?
 // Build out a new polyline for each batch of coordinates
 // Key on side with start/finish 
-var previousCoordinates = [<% @expedition.coordinates.each do |coordinate| %><%= "{id: #{coordinate.id}, latitude: #{coordinate.latitude}, longitude: #{coordinate.longitude}}," %><% end %>]
 
+var polyColours = ["#003366", "#009933", "#99cc00", "#ffcc00", "#cc6699", "#9966ff", "#996600", "#cc99ff"]
 var map;
 var poly;
 var path;
@@ -119,13 +117,15 @@ function initMap() {
     dropMarker.setPosition(e.latLng);
   });
   poly = new google.maps.Polyline({
-    strokeColor: '#009900',
+    strokeColor: <%= @poly_colour.inspect.html_safe %>,
     strokeOpacity: 1.0,
-    strokeWeight: 3
+    strokeWeight: 2
   });
   poly.setMap(map);
   path = poly.getPath();
 }
+var coordinates = JSON.parse(<%= @coordinates.inspect.html_safe %>);
+
 </script>
 
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCgPKDNnR376aeoPLyafsvnJs_EcpDtPV8&callback=initMap" async defer>
@@ -133,6 +133,93 @@ function initMap() {
 
 <script>
 window.onload = function () {
+
+  function buildPolylines (coordinates) {
+    // %%%TODO%%% Get the colours to change. Coordinate needs a column to indicate the expedition segment when created
+    // Find the first segment in the array (will always be 0) BUT NOT AT THE MOMENT
+    var segStart = coordinates[0].segment;
+    // Create a new polyline with the eqivalent colour from the polyColours array
+    var newPoly = new google.maps.Polyline({
+      strokeColor: polyColours[segStart % 8],
+      strokeOpacity: 1.0,
+      strokeWeight: 2
+    });
+    // Set the map for the polyline
+    newPoly.setMap(map);
+    // Set the path of the first polyline
+    var newPath = newPoly.getPath();
+    // Iterate through all coordinates
+    for (var i = 0; i < coordinates.length; ++i) {
+      // If a new segment of coordinates, increment segStart build a new polyline and set the path
+      if (segStart < coordinates[i].segment) {
+        segStart += 1;
+        var newPoly = new google.maps.Polyline({
+          strokeColor: polyColours[coordinates[i].segment % 8],
+          strokeOpacity: 1.0,
+          strokeWeight: 2
+        });
+        newPoly.setMap(map);
+        var newPath = newPoly.getPath();
+      }
+      // Build out coordinate latLng objects
+      latLng = new google.maps.LatLng(coordinates[i].latitude, coordinates[i].longitude);
+      if (coordinates[i].image != null) {
+        var contentMarker = new google.maps.Marker({
+          map: map,
+          draggable: false,
+          animation: google.maps.Animation.DROP
+        });
+        var infoWindow = new google.maps.InfoWindow({
+          content: '<img src="/uploads/annotation/image/' + coordinates[i].annotation_id + '/thumb_' + coordinates[i].image + '">'
+        });
+        contentMarker.setPosition(latLng);
+        contentMarker.addListener("click", function () {
+          map.panTo(contentMarker.getPosition());
+          if (lastInfoWindow != null) {
+            lastInfoWindow.close();
+          }
+          if (infoWindowClosed) {
+            infoWindow.open(map, contentMarker);
+            infoWindowClosed = false;
+          } else {
+            infoWindow.open(map, contentMarker);
+            infoWindowClosed = true;
+          }
+          lastInfoWindow = infoWindow;
+        })
+      }
+      if (coordinates[i].recording != null) {
+        var contentMarker = new google.maps.Marker({
+          map: map,
+          draggable: false,
+          animation: google.maps.Animation.DROP
+        });
+        var infoWindow = new google.maps.InfoWindow({
+          // Content type needs to be determined by the model. Maybe we're pushing the limits of the find_by_sql?
+          content: '<audio controls><source src="/uploads/annotation/recording/' + coordinates[i].annotation_id + '/' + coordinates[i].recording + '" type="audio/mpeg"></audio>'
+        });
+        contentMarker.setPosition(latLng);
+        contentMarker.addListener("click", function () {
+          map.panTo(contentMarker.getPosition());
+          if (lastInfoWindow != null) {
+            lastInfoWindow.close();
+          }
+          if (infoWindowClosed) {
+            infoWindow.open(map, contentMarker);
+            infoWindowClosed = false;
+          } else {
+            infoWindow.open(map, contentMarker);
+            infoWindowClosed = true;
+          }
+          lastInfoWindow = infoWindow;
+        })
+      }
+      map.setCenter(latLng);
+      // Push the coordinates to the polyline path array
+      newPath.push(latLng);
+    }
+  }
+
   var csrf = $('meta[name=csrf-token]').attr('content');
   var timer;
   function locate () {
@@ -143,7 +230,6 @@ window.onload = function () {
         if (path.b.length == 0) {
           startMarker.setPosition(latLng);
         }
-        map.setCenter(latLng);
         marker.setPosition(latLng);
         $('#latitude').html(data.coords.latitude.toString());
         $('#longitude').html(data.coords.longitude.toString());
@@ -175,6 +261,7 @@ window.onload = function () {
 
 
   $('#startLocate').on("click", function () {
+    buildPolylines(coordinates);
     locate();
   })
 

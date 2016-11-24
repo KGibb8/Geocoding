@@ -3,6 +3,8 @@ class ExpeditionsController < ApplicationController
   before_action :find_expedition, only: [:show, :edit, :update]
   semantic_breadcrumb :index, :expeditions_path
 
+  POLYCOLOUR = ["#003366", "#009933", "#99cc00", "#ffcc00", "#cc6699", "#9966ff", "#996600", "#cc99ff"]
+
   def index
     @my_expeditions = current_user.expeditions.order(:updated_at)
     @expedition = current_user.expeditions.build
@@ -18,6 +20,22 @@ class ExpeditionsController < ApplicationController
   end
 
   def edit
+    coordinate = @expedition.coordinates.last
+    if coordinate && (Time.now - 900 > coordinate.created_at)
+      # Maybe this segment thing is on the coordinate model instead or aswell as?
+      @expedition.segment += 1
+      @expedition.save
+    end
+    @segment = @expedition.segment
+    @coordinates = Coordinate.find_by_sql(
+      "SELECT c.id, c.parent_id, c.latitude, c.longitude, e.segment, a.id AS annotation_id, a.image, a.recording
+        FROM coordinates AS c
+          INNER JOIN expeditions AS e ON e.id = c.expedition_id
+          LEFT OUTER JOIN annotations AS a ON a.coordinate_id = c.id
+        WHERE e.id = #{@expedition.id}
+        ORDER BY c.id, c.parent_id, e.segment;"
+    ).to_json
+    @poly_colour = POLYCOLOUR[@expedition.segment % 8]
     @annotation = Annotation.new
   end
 

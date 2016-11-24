@@ -27,6 +27,7 @@ ActiveRecord::Schema.define(version: 20161122200147) do
 
   create_table "coordinates", force: :cascade do |t|
     t.integer  "expedition_id"
+    t.integer  "parent_id"
     t.float    "latitude"
     t.float    "longitude"
     t.integer  "accuracy"
@@ -42,17 +43,18 @@ ActiveRecord::Schema.define(version: 20161122200147) do
     t.string   "time_zone"
     t.datetime "created_at",       null: false
     t.datetime "updated_at",       null: false
-    t.integer  "parent_id"
     t.float    "distance_to_last"
     t.index ["expedition_id"], name: "index_coordinates_on_expedition_id", using: :btree
+    t.index ["parent_id"], name: "index_coordinates_on_parent_id", using: :btree
   end
 
   create_table "expeditions", force: :cascade do |t|
     t.integer  "user_id"
     t.string   "title"
     t.text     "description"
-    t.datetime "created_at",  null: false
-    t.datetime "updated_at",  null: false
+    t.integer  "segment",     default: 0
+    t.datetime "created_at",              null: false
+    t.datetime "updated_at",              null: false
     t.index ["user_id"], name: "index_expeditions_on_user_id", using: :btree
   end
 
