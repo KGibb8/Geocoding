@@ -1,6 +1,10 @@
 App.coordinates = App.cable.subscriptions.create("CoordinatesChannel", {
-  connected: function() {},
-  disconnected: function() {},
+  connected: function() {
+
+  },
+  disconnected: function() {
+
+  },
   received: function(data) {
     $('#distance').html(data.distance_travelled.toString())
     path = poly.getPath();

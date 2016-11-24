@@ -27,6 +27,8 @@ gem 'jbuilder', '~> 2.5'
 # Use ActiveModel has_secure_password
 # gem 'bcrypt', '~> 3.1.7'
 
+gem 'semantic-ui-sass', github: 'doabit/semantic-ui-sass'
+
 gem 'figaro'
 gem 'devise'
 gem 'geocoder'

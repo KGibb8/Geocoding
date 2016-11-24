@@ -1,6 +1,7 @@
 class ExpeditionsController < ApplicationController
   before_filter :authenticate_user!
   before_action :find_expedition, only: [:show, :edit, :update]
+  semantic_breadcrumb :index, :expeditions_path
 
   def index
     @my_expeditions = current_user.expeditions.order(:updated_at)
