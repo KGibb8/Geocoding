@@ -16,6 +16,7 @@ class CreateCoordinates < ActiveRecord::Migration[5.0]
       t.string :city
       t.string :zip_code
       t.string :time_zone
+      t.integer :segment
 
       t.timestamps
     end

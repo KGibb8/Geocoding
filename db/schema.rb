@@ -41,6 +41,7 @@ ActiveRecord::Schema.define(version: 20161122200147) do
     t.string   "city"
     t.string   "zip_code"
     t.string   "time_zone"
+    t.integer  "segment"
     t.datetime "created_at",       null: false
     t.datetime "updated_at",       null: false
     t.float    "distance_to_last"

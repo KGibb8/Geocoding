@@ -119,7 +119,7 @@ function initMap() {
   poly = new google.maps.Polyline({
     strokeColor: <%= @poly_colour.inspect.html_safe %>,
     strokeOpacity: 1.0,
-    strokeWeight: 2
+    strokeWeight: 4
   });
   poly.setMap(map);
   path = poly.getPath();
@@ -135,33 +135,25 @@ var coordinates = JSON.parse(<%= @coordinates.inspect.html_safe %>);
 window.onload = function () {
 
   function buildPolylines (coordinates) {
-    // %%%TODO%%% Get the colours to change. Coordinate needs a column to indicate the expedition segment when created
-    // Find the first segment in the array (will always be 0) BUT NOT AT THE MOMENT
     var segStart = coordinates[0].segment;
-    // Create a new polyline with the eqivalent colour from the polyColours array
     var newPoly = new google.maps.Polyline({
       strokeColor: polyColours[segStart % 8],
       strokeOpacity: 1.0,
-      strokeWeight: 2
+      strokeWeight: 4
     });
-    // Set the map for the polyline
     newPoly.setMap(map);
-    // Set the path of the first polyline
     var newPath = newPoly.getPath();
-    // Iterate through all coordinates
     for (var i = 0; i < coordinates.length; ++i) {
-      // If a new segment of coordinates, increment segStart build a new polyline and set the path
       if (segStart < coordinates[i].segment) {
         segStart += 1;
         var newPoly = new google.maps.Polyline({
           strokeColor: polyColours[coordinates[i].segment % 8],
           strokeOpacity: 1.0,
-          strokeWeight: 2
+          strokeWeight: 4
         });
         newPoly.setMap(map);
         var newPath = newPoly.getPath();
       }
-      // Build out coordinate latLng objects
       latLng = new google.maps.LatLng(coordinates[i].latitude, coordinates[i].longitude);
       if (coordinates[i].image != null) {
         var contentMarker = new google.maps.Marker({
@@ -169,6 +161,7 @@ window.onload = function () {
           draggable: false,
           animation: google.maps.Animation.DROP
         });
+        // %%%TODO%%% Refactor / Get Rid of Google Info Windows --> Use a modal instead for pictures and recordings
         var infoWindow = new google.maps.InfoWindow({
           content: '<img src="/uploads/annotation/image/' + coordinates[i].annotation_id + '/thumb_' + coordinates[i].image + '">'
         });
@@ -195,7 +188,7 @@ window.onload = function () {
           animation: google.maps.Animation.DROP
         });
         var infoWindow = new google.maps.InfoWindow({
-          // Content type needs to be determined by the model. Maybe we're pushing the limits of the find_by_sql?
+          // %%%TODO%%% Content type needs to be determined by the model. Maybe we're pushing the limits of the find_by_sql?
           content: '<audio controls><source src="/uploads/annotation/recording/' + coordinates[i].annotation_id + '/' + coordinates[i].recording + '" type="audio/mpeg"></audio>'
         });
         contentMarker.setPosition(latLng);
@@ -215,7 +208,6 @@ window.onload = function () {
         })
       }
       map.setCenter(latLng);
-      // Push the coordinates to the polyline path array
       newPath.push(latLng);
     }
   }
@@ -227,6 +219,9 @@ window.onload = function () {
     if (geo) {
       geo.getCurrentPosition(function (data) {
         latLng = new google.maps.LatLng(data.coords.latitude, data.coords.longitude);
+        if (coordinates.length != 0) {
+          map.setCenter(latLng);
+        }
         if (path.b.length == 0) {
           startMarker.setPosition(latLng);
         }
@@ -261,7 +256,9 @@ window.onload = function () {
 
 
   $('#startLocate').on("click", function () {
-    buildPolylines(coordinates);
+    if (coordinates.length != 0) {
+      buildPolylines(coordinates);
+    }
     locate();
   })
 

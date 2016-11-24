@@ -22,18 +22,16 @@ class ExpeditionsController < ApplicationController
   def edit
     coordinate = @expedition.coordinates.last
     if coordinate && (Time.now - 900 > coordinate.created_at)
-      # Maybe this segment thing is on the coordinate model instead or aswell as?
       @expedition.segment += 1
       @expedition.save
     end
     @segment = @expedition.segment
     @coordinates = Coordinate.find_by_sql(
-      "SELECT c.id, c.parent_id, c.latitude, c.longitude, e.segment, a.id AS annotation_id, a.image, a.recording
+      "SELECT c.id, c.parent_id, c.latitude, c.longitude, c.segment, a.id AS annotation_id, a.image, a.recording
         FROM coordinates AS c
-          INNER JOIN expeditions AS e ON e.id = c.expedition_id
           LEFT OUTER JOIN annotations AS a ON a.coordinate_id = c.id
-        WHERE e.id = #{@expedition.id}
-        ORDER BY c.id, c.parent_id, e.segment;"
+        WHERE c.expedition_id = #{@expedition.id}
+        ORDER BY c.id, c.parent_id, c.segment;"
     ).to_json
     @poly_colour = POLYCOLOUR[@expedition.segment % 8]
     @annotation = Annotation.new
