@@ -20,6 +20,8 @@ ActiveRecord::Schema.define(version: 20161122200147) do
     t.string   "image"
     t.string   "recording"
     t.string   "note"
+    t.string   "content_type"
+    t.string   "full_path"
     t.datetime "created_at",    null: false
     t.datetime "updated_at",    null: false
     t.index ["coordinate_id"], name: "index_annotations_on_coordinate_id", using: :btree

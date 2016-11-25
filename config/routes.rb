@@ -6,6 +6,8 @@ Rails.application.routes.draw do
   resources :expeditions, only: [:index, :create, :show, :edit, :update, :destroy] do
     resources :coordinates, only: [:create]
     resources :annotations, only: [:create, :destroy]
+    get '/annotations/grab' => 'annotations#grab', as: :grab_annotation
   end
+
 
 end

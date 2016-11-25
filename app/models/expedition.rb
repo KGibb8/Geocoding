@@ -4,7 +4,11 @@ class Expedition < ApplicationRecord
 
   def attach_file(annotation)
     coordinate = self.coordinates.last
-    coordinate.annotations.create(annotation)
+    key = annotation.keys.first
+    content_type = annotation[key].content_type
+    full_path = "/uploads/annotation/#{key}/"
+    new_annotation = coordinate.annotations.new(annotation.merge(content_type: content_type, full_path: full_path))
+    coordinate.annotations.create(annotation.merge(content_type: content_type, full_path: full_path))
   end
 
   def images

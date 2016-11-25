@@ -5,6 +5,8 @@ class CreateAnnotations < ActiveRecord::Migration[5.0]
       t.string :image
       t.string :recording
       t.string :note
+      t.string :content_type
+      t.string :full_path
 
       t.timestamps
     end

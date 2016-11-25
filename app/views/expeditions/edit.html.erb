@@ -53,9 +53,20 @@
 <div class="twelve wide column"><div id="map"></div></div>
 <div class="one wide column"></div>
 
+<div class="ui basic modal">
+  <i class="close icon"></i>
+  <div class="image content">
+    <div class="annotationInsert">
+    </div>
+    <div class="description">
+    </div>
+  </div>
+</div>
+
 <script src="/assets/fulltilt-min.js"></script>
 
 <script>
+
 
 // Build out a new polyline for each batch of coordinates
 // Key on side with start/finish 
@@ -124,6 +135,7 @@ function initMap() {
   poly.setMap(map);
   path = poly.getPath();
 }
+
 var coordinates = JSON.parse(<%= @coordinates.inspect.html_safe %>);
 
 </script>
@@ -155,61 +167,59 @@ window.onload = function () {
         var newPath = newPoly.getPath();
       }
       latLng = new google.maps.LatLng(coordinates[i].latitude, coordinates[i].longitude);
-      if (coordinates[i].image != null) {
+      if (coordinates[i].full_path != null) {
+        var annotation_id = coordinates[i].annotation_id.toString();
         var contentMarker = new google.maps.Marker({
           map: map,
           draggable: false,
           animation: google.maps.Animation.DROP
         });
-        // %%%TODO%%% Refactor / Get Rid of Google Info Windows --> Use a modal instead for pictures and recordings
-        var infoWindow = new google.maps.InfoWindow({
-          content: '<img src="/uploads/annotation/image/' + coordinates[i].annotation_id + '/thumb_' + coordinates[i].image + '">'
-        });
+        contentMarker.addListener("click", buildAnotationClicker(annotation_id));
         contentMarker.setPosition(latLng);
-        contentMarker.addListener("click", function () {
-          map.panTo(contentMarker.getPosition());
-          if (lastInfoWindow != null) {
-            lastInfoWindow.close();
-          }
-          if (infoWindowClosed) {
-            infoWindow.open(map, contentMarker);
-            infoWindowClosed = false;
-          } else {
-            infoWindow.open(map, contentMarker);
-            infoWindowClosed = true;
-          }
-          lastInfoWindow = infoWindow;
-        })
-      }
-      if (coordinates[i].recording != null) {
-        var contentMarker = new google.maps.Marker({
-          map: map,
-          draggable: false,
-          animation: google.maps.Animation.DROP
-        });
-        var infoWindow = new google.maps.InfoWindow({
-          // %%%TODO%%% Content type needs to be determined by the model. Maybe we're pushing the limits of the find_by_sql?
-          content: '<audio controls><source src="/uploads/annotation/recording/' + coordinates[i].annotation_id + '/' + coordinates[i].recording + '" type="audio/mpeg"></audio>'
-        });
-        contentMarker.setPosition(latLng);
-        contentMarker.addListener("click", function () {
-          map.panTo(contentMarker.getPosition());
-          if (lastInfoWindow != null) {
-            lastInfoWindow.close();
-          }
-          if (infoWindowClosed) {
-            infoWindow.open(map, contentMarker);
-            infoWindowClosed = false;
-          } else {
-            infoWindow.open(map, contentMarker);
-            infoWindowClosed = true;
-          }
-          lastInfoWindow = infoWindow;
-        })
       }
       map.setCenter(latLng);
       newPath.push(latLng);
     }
+  }
+
+  function getAnnotation (annotationId) {
+    var csrf = $('meta[name=csrf-token]').attr('content');
+    $.get('/expeditions/'+ <%= @expedition.id %> + '/annotations/grab/', {
+      authenticity_token: csrf,
+      annotation: {
+        id: annotation_id
+      }
+    }).done(function (response) {
+      return response;
+    }).fail(function (response) {
+      return response;
+    });
+  }
+
+  // A Javascript Closure -- Maintains local scope (here annotation_id)
+  function buildAnotationClicker (annotation_id) {
+    return function () {
+      var csrf = $('meta[name=csrf-token]').attr('content');
+      $.get('/expeditions/'+ <%= @expedition.id %> + '/annotations/grab/', {
+        authenticity_token: csrf,
+        annotation: {
+          id: annotation_id
+        }
+      }).done(function (response) {
+        var annotationDiv = $('.annotationInsert');
+        annotationDiv.empty();
+        if (response.annotation.full_path.substring(20, 999) == "recording/") {
+          annotationDiv.append('<audio controls><source src="' + response.annotation.recording.url + '" type="' + response.annotation.content_type + '"><audio>');
+        } else if (response.annotation.full_path.substring(20,999) == "image/") {
+          annotationDiv.append('<img src="' + response.annotation.image.medium.url + '">');
+        }
+        $('.ui.basic.modal')
+          .modal('show')
+        ;
+      }).fail(function (response) {
+        console.log(response);
+      });
+    };
   }
 
   var csrf = $('meta[name=csrf-token]').attr('content');
@@ -253,8 +263,6 @@ window.onload = function () {
     timer = setTimeout(locate, 1000);
   }
 
-
-
   $('#startLocate').on("click", function () {
     if (coordinates.length != 0) {
       buildPolylines(coordinates);
@@ -266,20 +274,6 @@ window.onload = function () {
     clearTimeout(timer);
   })
 
-  function toggleWindow (infoWindow, map, contentMarker) {
-    if (lastInfoWindow != null) {
-      lastInfoWindow.close();
-    }
-    if (infoWindowClosed) {
-      infoWindow.open(map, contentMarker);
-      infoWindowClosed = false;
-    } else {
-      infoWindow.open(map, contentMarker);
-      infoWindowClosed = true;
-    }
-    lastInfoWindow = infoWindow;
-  }
-
   $('#submitTitle').on("ajax:success", function (e, data) {
     $('#title').html(data.title);
   });
@@ -290,57 +284,31 @@ window.onload = function () {
 
   $('#submitImage').on("ajax:remotipartComplete", function (e, data) {
     response = JSON.parse(data.responseText);
+    $('#images').append('<img src="' + response.annotation.image.thumb.url + '" id="annotation_' + response.annotation.id + '">');
     latLng = new google.maps.LatLng(response.coordinate.latitude, response.coordinate.longitude);
     var contentMarker = new google.maps.Marker({
       map: map,
       draggable: false,
       animation: google.maps.Animation.DROP
     });
-    var infoWindow = new google.maps.InfoWindow({
-      content: '<img src="' + response.annotation.image.thumb.url + '">'
-    });
     contentMarker.setPosition(latLng);
     contentMarker.addListener("click", function () {
-      map.panTo(contentMarker.getPosition());
-      if (lastInfoWindow != null) {
-        lastInfoWindow.close();
-      }
-      if (infoWindowClosed) {
-        infoWindow.open(map, contentMarker);
-        infoWindowClosed = false;
-      } else {
-        infoWindow.open(map, contentMarker);
-        infoWindowClosed = true;
-      }
-      lastInfoWindow = infoWindow;
+      $('#image_' + response.annotation.id).toggle();
     })
   });
 
   $('#submitRecording').on("ajax:remotipartComplete", function (e, data) {
     response = JSON.parse(data.responseText);
+    $('#recordings').append('<audio controls><source src="' + response.annotation.recording.url + '" type="'+ response.annotation.content_type  + '" id="' + response.annotation.id + '"></audio>')
     latLng = new google.maps.LatLng(response.coordinate.latitude, response.coordinate.longitude);
     var contentMarker = new google.maps.Marker({
       map: map,
       draggable: false,
       animation: google.maps.Animation.DROP
     });
-    var infoWindow = new google.maps.InfoWindow({
-      content: '<audio controls><source src="' + response.annotation.url + '" type="'+ response.annotation.content_type  + '"></audio>'
-    });
     contentMarker.setPosition(latLng);
     contentMarker.addListener("click", function () {
-      map.panTo(contentMarker.getPosition());
-      if (lastInfoWindow != null) {
-        lastInfoWindow.close();
-      }
-      if (infoWindowClosed) {
-        infoWindow.open(map, contentMarker);
-        infoWindowClosed = false;
-      } else {
-        infoWindow.open(map, contentMarker);
-        infoWindowClosed = true;
-      }
-      lastInfoWindow = infoWindow;
+      $('#recording_' + response.annotation.id).toggle();
     })
   });
 }

@@ -27,7 +27,7 @@ class ExpeditionsController < ApplicationController
     end
     @segment = @expedition.segment
     @coordinates = Coordinate.find_by_sql(
-      "SELECT c.id, c.parent_id, c.latitude, c.longitude, c.segment, a.id AS annotation_id, a.image, a.recording
+      "SELECT c.id, c.parent_id, c.latitude, c.longitude, c.segment, a.id AS annotation_id, a.image, a.recording, a.full_path, a.content_type
         FROM coordinates AS c
           LEFT OUTER JOIN annotations AS a ON a.coordinate_id = c.id
         WHERE c.expedition_id = #{@expedition.id}
