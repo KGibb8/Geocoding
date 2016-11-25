@@ -184,45 +184,34 @@ window.onload = function () {
 
   function getAnnotation (annotationId) {
     var csrf = $('meta[name=csrf-token]').attr('content');
-    $.get('/expeditions/'+ <%= @expedition.id %> + '/annotations/grab/', {
+    return $.get('/expeditions/'+ <%= @expedition.id %> + '/annotations/grab/', {
       authenticity_token: csrf,
       annotation: {
-        id: annotation_id
+        id: annotationId
       }
-    }).done(function (response) {
-      return response;
-    }).fail(function (response) {
-      return response;
-    });
+    })
   }
 
-  // A Javascript Closure -- Maintains local scope (here annotation_id)
   function buildAnotationClicker (annotation_id) {
     return function () {
-      var csrf = $('meta[name=csrf-token]').attr('content');
-      $.get('/expeditions/'+ <%= @expedition.id %> + '/annotations/grab/', {
-        authenticity_token: csrf,
-        annotation: {
-          id: annotation_id
-        }
-      }).done(function (response) {
+      getAnnotation(annotation_id).done(function (response) {
         var annotationDiv = $('.annotationInsert');
         annotationDiv.empty();
         if (response.annotation.full_path.substring(20, 999) == "recording/") {
-          annotationDiv.append('<audio controls><source src="' + response.annotation.recording.url + '" type="' + response.annotation.content_type + '"><audio>');
-        } else if (response.annotation.full_path.substring(20,999) == "image/") {
+          annotationDiv.append('<audio controls><source src="' + response.annotation.recording.url +
+          '" type="' + response.annotation.content_type + '"><audio>');
+        } else if (response.annotation.full_path.substring(20, 999) == "image/") {
           annotationDiv.append('<img src="' + response.annotation.image.medium.url + '">');
         }
         $('.ui.basic.modal')
           .modal('show')
         ;
       }).fail(function (response) {
-        console.log(response);
+        console.log("Some ERROR message");
       });
     };
   }
 
-  var csrf = $('meta[name=csrf-token]').attr('content');
   var timer;
   function locate () {
     var geo = navigator.geolocation;
@@ -284,7 +273,6 @@ window.onload = function () {
 
   $('#submitImage').on("ajax:remotipartComplete", function (e, data) {
     response = JSON.parse(data.responseText);
-    $('#images').append('<img src="' + response.annotation.image.thumb.url + '" id="annotation_' + response.annotation.id + '">');
     latLng = new google.maps.LatLng(response.coordinate.latitude, response.coordinate.longitude);
     var contentMarker = new google.maps.Marker({
       map: map,
@@ -292,14 +280,11 @@ window.onload = function () {
       animation: google.maps.Animation.DROP
     });
     contentMarker.setPosition(latLng);
-    contentMarker.addListener("click", function () {
-      $('#image_' + response.annotation.id).toggle();
-    })
+    contentMarker.addListener("click", buildAnotationClicker(response.annotation.id));
   });
 
   $('#submitRecording').on("ajax:remotipartComplete", function (e, data) {
     response = JSON.parse(data.responseText);
-    $('#recordings').append('<audio controls><source src="' + response.annotation.recording.url + '" type="'+ response.annotation.content_type  + '" id="' + response.annotation.id + '"></audio>')
     latLng = new google.maps.LatLng(response.coordinate.latitude, response.coordinate.longitude);
     var contentMarker = new google.maps.Marker({
       map: map,
@@ -307,9 +292,7 @@ window.onload = function () {
       animation: google.maps.Animation.DROP
     });
     contentMarker.setPosition(latLng);
-    contentMarker.addListener("click", function () {
-      $('#recording_' + response.annotation.id).toggle();
-    })
+    contentMarker.addListener("click", buildAnotationClicker(response.annotation.id));
   });
 }
 </script>
