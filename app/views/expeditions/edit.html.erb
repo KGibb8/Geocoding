@@ -1,64 +1,62 @@
-<style>
-#map {
-  height: 500px;
-  width: 100%;
-}
-#startLocate {
-  float: left;
-}
-#stopLocate{
-  float: right;
-}
-</style>
 
-<div class="one wide column"></div>
-<div class="four wide column"><%= button_tag "Start Geolocation", id: "startLocate" %></div>
-<div class="three wide column">
-  <%= form_for [@expedition, @annotation], html: {id: "submitImage"}, remote: true, method: :post do |f| %>
-    <%= f.label "Upload an Image" %><br>
-    <%= f.file_field :image %><br>
-    <%= f.submit "Add Image" %>
-  <% end %>
-</div>
-<div class="three wide column">
-  <%= form_for [@expedition, @annotation], html: {id: "submitRecording"}, remote: true, method: :post do |f| %>
-    <%= f.label "Upload a Recording" %><br>
-    <%= f.file_field :recording %><br>
-    <%= f.submit "Add Recording" %>
-  <% end %>
-</div>
-<div class="four wide column"><%= button_tag "Stop Geolocation", id: "stopLocate" %></div>
-<div class="one wide column"></div>
+<header>
+  <p class="notice"><%= notice %></p>
+  <p class="alert"><%= alert %></p>
+  <%= link_to "Start Geolocation", "#", id: "startLocate" %>
+  <%= link_to "Stop Geolocation", "#", id: "stopLocate" %>
+</header>
 
 <div class="three wide column">
-  <p>Latitude: <span id="latitude"></span></p>
-  <p>Longitude: <span id="longitude"></span></p>
-  <p>Accuracy: <span id="accuracy"></span></p>
-  <p>Heading: <span id="compass"></span>°</p>
-  <p>Distance: <span id="distance"></span>m</p>
-  <p><span id="info"></span></p>
-  <br>
-  <%= form_for @expedition, html: {id: "submitTitle"}, remote: true, method: :patch do |f| %>
-    <%= f.label :title %><br>
-    <%= f.text_area :title %><br>
-    <%= f.submit %>
-  <% end %>
-  <br>
-  <%= form_for @expedition, html: {id: "submitDescription"}, remote: true, method: :patch do |f| %>
-    <%= f.label :desciption %><br>
-    <%= f.text_area :description %><br>
-    <%= f.submit %>
-  <% end %>
+  <aside id="sidebar">
+    <ul>
+      <li class="sidebar-list">
+        <%= link_to "Create a note", "#", id: "createNote" %>
+      </li>
+      <li class="sidebar-list">
+        <%= link_to "Edit a note", "#", id: "editNote" %>
+      </li>
+      <li class="sidebar-list">
+        <%= link_to "View Notes", "#", id: "viewNotes" %>
+      </li>
+      <li class="sidebar-list"></li>
+    </ul>
+  </aside>
 </div>
-<div class="twelve wide column"><div id="map"></div></div>
-<div class="one wide column"></div>
 
-<div class="ui basic modal">
-  <i class="close icon"></i>
-  <div class="image content">
-    <div class="annotationInsert">
+<div class="thirteen wide column">
+  <article>
+    <div id="map"></div>
+  </article>
+</div>
+
+<div class="ui dimmer modals page">
+  <div class="ui fullscreen modal transition hidden">
+    <i class="close icon"></i>
+    <div class="header">Create a new note</div>
+    <div class="content">
+      <%= form_for [@expedition, @annotation], html: { id: "submitNote" }, remote: true, method: :post do |f| %>
+        <div class="ui form">
+          <h4 class="ui dividing header"><%= f.label "Write your note below" %></h4>
+          <div class="field"><%= f.text_area :note %></div>
+          <h4 class="ui dividing header"><%= f.label "Hashtags (for kingdom, family, order, class, species, etc)" %></h4>
+          <div class="field"><%= text_field_tag "hashtags", "Currently unavailable" %></div>
+          <div class="field">Add an image: <%= f.file_field :image %></div>
+          <div class="field">Or a recording: <%= f.file_field :recording %></div>
+          <div class="field"><%= f.submit %></div>
+        </div>
+      <% end %>
     </div>
-    <div class="description">
+  </div>
+
+  <div class="ui basic modal">
+    <i class="close icon"></i>
+    <div class="image content">
+      <div class="annotationInsert">
+      </div>
+      <div class="description">
+      </div>
+      <div class="taggings">
+      </div>
     </div>
   </div>
 </div>
@@ -66,233 +64,15 @@
 <script src="/assets/fulltilt-min.js"></script>
 
 <script>
-
-
-// Build out a new polyline for each batch of coordinates
-// Key on side with start/finish 
-
-var polyColours = ["#003366", "#009933", "#99cc00", "#ffcc00", "#cc6699", "#9966ff", "#996600", "#cc99ff"]
-var map;
-var poly;
-var path;
-var heading;
-var startMarker;
-var marker;
-var contentMarker;
-var infoWindow;
-var lastInfoWindow;
-var infoWindowClosed;
-var infoWindowClosed = true;
-
-function initMap() {
-  var compassSpan = document.getElementById("compass");
-  heading = 0.0;
-  // Obtain a new *world-oriented* Full Tilt JS DeviceOrientation Promise
-  var promise = FULLTILT.getDeviceOrientation({ type: 'world'  });
-
-  // Wait for Promise result
-  promise.then(function(deviceOrientation) {
-    // Apparently device orientation events are supported, so register a callback
-    deviceOrientation.listen(function() {
-      // Get the current *screen-adjusted* device orientation angles
-      var currentOrientation = deviceOrientation.getScreenAdjustedEuler();
-      console.log(currentOrientation);
-      // Calculate the current compass heading that the user is facing (in degrees)
-      heading = 360 - currentOrientation.alpha;
-      compassSpan.innerHTML = heading.toString();
-    });
-  }).catch(function(errorMessage) {
-    // Device Orientation Events are not supported
-    console.log(errorMessage);
-  });
-  map = new google.maps.Map(document.getElementById('map'), {
-    minZoom: 3,
-    zoom: 16,
-    mapTypeId: 'satellite'
-  });
-  startMarker = new google.maps.Marker({
-    map: map,
-    draggable: false
-  });
-  marker = new google.maps.Marker({
-    map: map,
-    draggable: false
-  });
-  dropMarker = new google.maps.Marker({
-    map: map,
-    draggable: false,
-    animation: google.maps.Animation.DROP
-  });
-  map.addListener('click', function (e) {
-    dropMarker.setVisible(true);
-    dropMarker.setPosition(e.latLng);
-  });
-  poly = new google.maps.Polyline({
-    strokeColor: <%= @poly_colour.inspect.html_safe %>,
-    strokeOpacity: 1.0,
-    strokeWeight: 4
-  });
-  poly.setMap(map);
-  path = poly.getPath();
-}
-
-var coordinates = JSON.parse(<%= @coordinates.inspect.html_safe %>);
-
+var polyColour = <%= @poly_colour.inspect.html_safe %>;
+var expeditionId = <%= @expedition.id %>;
 </script>
+<%= javascript_include_tag 'map' %>
+
+<script>var coordinates = JSON.parse(<%= @coordinates.inspect.html_safe %>);</script>
 
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCgPKDNnR376aeoPLyafsvnJs_EcpDtPV8&callback=initMap" async defer>
 </script>
 
-<script>
-window.onload = function () {
+<%= javascript_include_tag 'expeditions' %>
 
-  function buildPolylines (coordinates) {
-    var segStart = coordinates[0].segment;
-    var newPoly = new google.maps.Polyline({
-      strokeColor: polyColours[segStart % 8],
-      strokeOpacity: 1.0,
-      strokeWeight: 4
-    });
-    newPoly.setMap(map);
-    var newPath = newPoly.getPath();
-    for (var i = 0; i < coordinates.length; ++i) {
-      if (segStart < coordinates[i].segment) {
-        segStart += 1;
-        var newPoly = new google.maps.Polyline({
-          strokeColor: polyColours[coordinates[i].segment % 8],
-          strokeOpacity: 1.0,
-          strokeWeight: 4
-        });
-        newPoly.setMap(map);
-        var newPath = newPoly.getPath();
-      }
-      latLng = new google.maps.LatLng(coordinates[i].latitude, coordinates[i].longitude);
-      if (coordinates[i].full_path != null) {
-        var annotation_id = coordinates[i].annotation_id.toString();
-        var contentMarker = new google.maps.Marker({
-          map: map,
-          draggable: false,
-          animation: google.maps.Animation.DROP
-        });
-        contentMarker.addListener("click", buildAnotationClicker(annotation_id));
-        contentMarker.setPosition(latLng);
-      }
-      map.setCenter(latLng);
-      newPath.push(latLng);
-    }
-  }
-
-  function getAnnotation (annotationId) {
-    var csrf = $('meta[name=csrf-token]').attr('content');
-    return $.get('/expeditions/'+ <%= @expedition.id %> + '/annotations/grab/', {
-      authenticity_token: csrf,
-      annotation: {
-        id: annotationId
-      }
-    })
-  }
-
-  function buildAnotationClicker (annotation_id) {
-    return function () {
-      getAnnotation(annotation_id).done(function (response) {
-        var annotationDiv = $('.annotationInsert');
-        annotationDiv.empty();
-        if (response.annotation.full_path.substring(20, 999) == "recording/") {
-          annotationDiv.append('<audio controls><source src="' + response.annotation.recording.url +
-          '" type="' + response.annotation.content_type + '"><audio>');
-        } else if (response.annotation.full_path.substring(20, 999) == "image/") {
-          annotationDiv.append('<img src="' + response.annotation.image.medium.url + '">');
-        }
-        $('.ui.basic.modal')
-          .modal('show')
-        ;
-      }).fail(function (response) {
-        console.log("Some ERROR message");
-      });
-    };
-  }
-
-  var timer;
-  function locate () {
-    var geo = navigator.geolocation;
-    if (geo) {
-      geo.getCurrentPosition(function (data) {
-        latLng = new google.maps.LatLng(data.coords.latitude, data.coords.longitude);
-        if (coordinates.length != 0) {
-          map.setCenter(latLng);
-        }
-        if (path.b.length == 0) {
-          startMarker.setPosition(latLng);
-        }
-        marker.setPosition(latLng);
-        $('#latitude').html(data.coords.latitude.toString());
-        $('#longitude').html(data.coords.longitude.toString());
-        $('#accuracy').html(data.coords.accuracy.toString());
-        App.coordinates.create({
-          coordinate: {
-            latitude: data.coords.latitude,
-            longitude: data.coords.longitude,
-            accuracy: data.coords.accuracy,
-            altitude: data.coords.altitude,
-            bearing: heading
-          },
-          expedition: {
-            id: <%= @expedition.id %>
-          }
-        });
-      }, function error(msg){
-        $("#error").html(msg);
-        console.log(msg);
-      }, {
-        timeout: 10000,
-        maximumAge:900,
-        enableHighAccuracy: true
-      });
-    }
-    timer = setTimeout(locate, 1000);
-  }
-
-  $('#startLocate').on("click", function () {
-    if (coordinates.length != 0) {
-      buildPolylines(coordinates);
-    }
-    locate();
-  })
-
-  $('#stopLocate').on("click", function () {
-    clearTimeout(timer);
-  })
-
-  $('#submitTitle').on("ajax:success", function (e, data) {
-    $('#title').html(data.title);
-  });
-
-  $('#submitDescription').on("ajax:success", function (e, data) {
-    $('#description').html(data.description);
-  });
-
-  $('#submitImage').on("ajax:remotipartComplete", function (e, data) {
-    response = JSON.parse(data.responseText);
-    latLng = new google.maps.LatLng(response.coordinate.latitude, response.coordinate.longitude);
-    var contentMarker = new google.maps.Marker({
-      map: map,
-      draggable: false,
-      animation: google.maps.Animation.DROP
-    });
-    contentMarker.setPosition(latLng);
-    contentMarker.addListener("click", buildAnotationClicker(response.annotation.id));
-  });
-
-  $('#submitRecording').on("ajax:remotipartComplete", function (e, data) {
-    response = JSON.parse(data.responseText);
-    latLng = new google.maps.LatLng(response.coordinate.latitude, response.coordinate.longitude);
-    var contentMarker = new google.maps.Marker({
-      map: map,
-      draggable: false,
-      animation: google.maps.Animation.DROP
-    });
-    contentMarker.setPosition(latLng);
-    contentMarker.addListener("click", buildAnotationClicker(response.annotation.id));
-  });
-}
-</script>

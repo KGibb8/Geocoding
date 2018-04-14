@@ -19,7 +19,7 @@ ActiveRecord::Schema.define(version: 20161122200147) do
     t.integer  "coordinate_id"
     t.string   "image"
     t.string   "recording"
-    t.string   "note"
+    t.text     "note"
     t.string   "content_type"
     t.string   "full_path"
     t.datetime "created_at",    null: false

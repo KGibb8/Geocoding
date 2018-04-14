@@ -1,3 +1,24 @@
 // Place all the styles related to the expeditions controller here.
 // They will automatically be included in application.css.
 // You can use Sass (SCSS) here: http://sass-lang.com/
+#map {
+  margin-right: 3em;
+  height: 525px;
+  width: 100%;
+}
+#startLocate {
+  visibility: hidden;
+}
+#stopLocate{
+  visibility: hidden;
+}
+
+#sidebar {
+  padding: 1em;
+  padding-top: 2em;
+  color: #E5E3DF;
+}
+
+.sidebar-list {
+  font-size: 16pt;
+}

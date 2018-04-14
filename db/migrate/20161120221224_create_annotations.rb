@@ -4,7 +4,7 @@ class CreateAnnotations < ActiveRecord::Migration[5.0]
       t.references :coordinate, foreign_key: true
       t.string :image
       t.string :recording
-      t.string :note
+      t.text :note
       t.string :content_type
       t.string :full_path
 

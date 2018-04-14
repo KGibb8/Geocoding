@@ -16,3 +16,36 @@
 @import "semantic-ui";
 @import "semantic-ui/collections/menu";
 
+body {
+  margin: 0;
+  background-color: #C0D9AF;
+}
+
+a {
+  color: #E5E3DF;
+}
+a:hover {
+  color: #4183C4;
+}
+
+header {
+  background-color: #1B1C1D;
+  height: 120px;
+  width: 100%;
+}
+
+aside {
+  background-color: #324F17;
+  height: 100%;
+  z-index: 1;
+}
+
+ul {
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+  li {
+    margin-bottom: 1em;
+    list-style: none;
+  }
+}

@@ -39,6 +39,7 @@ Rails.application.configure do
 
   config.action_cable.allowed_request_origins = ["https://192.168.1.141:3000"]
   config.action_cable.allowed_request_origins = ["https://192.168.1.88:3000"]
+  config.action_cable.allowed_request_origins = ["https://192.168.1.103:3000"]
   # Debug mode disables concatenation and preprocessing of assets.
   # This option may cause significant delays in view rendering with a large
   # number of complex assets.
